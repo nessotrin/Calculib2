@@ -67,7 +67,7 @@ void CalculibNetworkSocket::tick()
 void CalculibNetworkSocket::finalizeConnection()
 {   
     //final setup on the socket
-    SFMLSocket.setBlocking(0);
+    SFMLSocket.setBlocking(false);
 
     connected = true;
 
@@ -76,40 +76,136 @@ void CalculibNetworkSocket::finalizeConnection()
 
 #include "Calculib.h"
 
-bool CalculibNetworkSocket::connect()
+#include "CalculibTime.h"//Sleep
+
+sf::Socket::Status CalculibNetworkSocket::receiveWithTimeout(char * ptr, int max, std::size_t * received, int timeoutMS)
 {
-    if(SFMLSocket.connect("127.0.0.1", 63000, sf::milliseconds(5000)) == sf::Socket::Done)
+    bool wasBlocking = SFMLSocket.isBlocking();
+    SFMLSocket.setBlocking(false);
+    
+    sf::Socket::Status status;
+    for(int i  = 0 ; i < timeoutMS/100 ; i++)
     {
-        char data[17];
-        std::size_t received;
-        sf::Socket::Status status = SFMLSocket.receive(data, 17, received);
-        if(status == sf::Socket::Error)
+        status = SFMLSocket.receive(ptr, max, *received);
+        if(status != sf::Socket::NotReady)
+        {
+            break;
+        }
+        Sleep(100);
+    }
+    
+    SFMLSocket.setBlocking(wasBlocking); //put it back
+    
+    return status;
+}
+
+CALCULIB_NETWORKSOCKET_TRYPROTOCOL_RESULT CalculibNetworkSocket::tryCalculib1Connect()
+{
+    char data[17];
+    std::size_t received;
+    
+    sf::Socket::Status status = receiveWithTimeout(data,17,&received,200); // should answer quicly
+    
+    if(status == sf::Socket::Error || status == sf::Socket::Disconnected)
+    {
+        printf("Connection is broken !\n");
+        return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_FAILURE;
+    }
+    else if(status == sf::Socket::Done && strcmp(data,"SERVER_EXIT_FULL") == 0)
+    {
+        printf("Server is full !\n");
+        return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_FAILURE;
+    }
+    else if(status == sf::Socket::Done && strcmp(data,"SERVER_GOOD_DONE") == 0)
+    {
+        printf("Calculib Protocol V1 detected ...\n");
+        return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_CONNECTED;
+    }
+    else
+    {
+        printf("Calculib Protocol V1 not detected ...\n");
+        return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_TRYANOTHER;
+    }
+}
+
+CALCULIB_NETWORKSOCKET_TRYPROTOCOL_RESULT CalculibNetworkSocket::tryCalculib2Connect()
+{
+    std::size_t transfered;
+    sf::Socket::Status status = SFMLSocket.send("CALCULIB2_CONNECT",17,transfered);
+    if(status == sf::Socket::Done)
+    {
+        char data[25];
+        sf::Socket::Status receiveStatus = receiveWithTimeout(data, 25, &transfered,200); //fast answer expected
+        if(receiveStatus == sf::Socket::Error || receiveStatus == sf::Socket::Disconnected)
         {
             printf("Connection is broken !\n");
+            return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_FAILURE;
         }
-        else if(status == sf::Socket::Done && strcmp(data,"SERVER_EXIT_FULL") == 0)
+        else if(receiveStatus == sf::Socket::Done && transfered == 21 && memcmp(data,"CALCULIB2_SERVER_FULL",21) == 0)
         {
             printf("Server is full !\n");
+            return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_FAILURE;
         }
-        else if(status == sf::Socket::Done && strcmp(data,"SERVER_GOOD_DONE") == 0)
+        else if(receiveStatus == sf::Socket::Done && transfered == 18 && memcmp(data,"CALCULIB2_ACCEPTED",18) == 0)
         {
-            printf("Calculib Protocol V1 detected ...\n");
-            finalizeConnection();
-            return true;
+            printf("Calculib Protocol V2 detected ...\n");
+            return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_CONNECTED;
         }
         else
         {
-            printf("Protocol-free server detected ...\n");
-            finalizeConnection();
-            return true;
+            printf("Calculib Protocol V2 not detected ... (%d %d %d)\n",transfered,receiveStatus,sf::Socket::Done);
+            return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_TRYANOTHER;
         }
-        
-        SFMLSocket.disconnect();
     }
+    else
+    {
+            printf("Connection is broken !\n");
+            return CALCULIB_NETWORKSOCKET_TRYPROTOCOL_FAILURE;
+    }
+}
+
+
+bool CalculibNetworkSocket::connect()
+{
+    for(int protocolId = 0 ; protocolId < 2 ; protocolId++)
+    {
+        printf("Attempting connection ...\n");
+        if(SFMLSocket.connect("89.157.210.47", 63000, sf::milliseconds(5000)) == sf::Socket::Done)
+        {
+            printf("Socket connected !\n");
+            CALCULIB_NETWORKSOCKET_TRYPROTOCOL_RESULT result;
+            switch(protocolId)
+            {
+                case 0:
+                    result = tryCalculib1Connect();
+                    break;
+                case 1:
+                    result = tryCalculib2Connect();
+                    break;
+            };
+            
+            if(result == CALCULIB_NETWORKSOCKET_TRYPROTOCOL_CONNECTED)
+            {
+                finalizeConnection();
+                return false;
+            }
+            else if(result == CALCULIB_NETWORKSOCKET_TRYPROTOCOL_FAILURE)
+            {
+                break;
+            }
+
+            SFMLSocket.disconnect();
+        }
+        else
+        {
+            printf("Failed to connect the TCP socket ...\n");
+        }
+    }
+
     
     printf("Network socket couldn't connect !\n");
     
-    return false;
+    return true;
 }
 
 void CalculibNetworkSocket::disconnect()

@@ -83,7 +83,7 @@
         <SingleFileCommand/>
         <MakefileGenerationCommand/>
         <ThirdPartyToolName>None</ThirdPartyToolName>
-        <WorkingDirectory>/home/hugo/NESSCASDK/Calculib2</WorkingDirectory>
+        <WorkingDirectory>/home/hugo/NESSCASDK_NOGIT/Calculib2</WorkingDirectory>
       </CustomBuild>
       <AdditionalRules>
         <CustomPostBuild/>
