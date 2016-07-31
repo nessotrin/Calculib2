@@ -170,7 +170,7 @@ bool CalculibNetworkSocket::connect()
     for(int protocolId = 0 ; protocolId < 2 ; protocolId++)
     {
         printf("Attempting connection ...\n");
-        if(SFMLSocket.connect("89.157.210.47", 63000, sf::milliseconds(5000)) == sf::Socket::Done)
+        if(SFMLSocket.connect("127.0.0.1", 63000, sf::milliseconds(5000)) == sf::Socket::Done)
         {
             printf("Socket connected !\n");
             CALCULIB_NETWORKSOCKET_TRYPROTOCOL_RESULT result;

@@ -29,27 +29,20 @@ char * ML_vram_adress()
 {
     return (*(sc_cpv)sc0135)();
 }
-unsigned long ML_vram_adress_as_ulong()
-{
-    return (*(sc_cpv_ulong)sc0135)();
-}
 #endif
 
+#define S (sizeof long)
 
 void ML_clear_vram()
 {
-	unsigned long i, end, *pointer_long, vram;
-	char *pointer_byte;
-	vram = (ML_vram_adress_as_ulong());
-	end = 4-vram&3;
-	pointer_byte = (char*)vram;
-	for(i=0 ; i<end ; i++) pointer_byte[i] = 0;
-	pointer_long = (unsigned long*) (vram+end);
-	for(i=0 ; i<255 ; i++) pointer_long[i] = 0;
-	pointer_byte += 1020+end;
-	end = vram&3;
-	for(i=0 ; i<end ; i++) pointer_byte[i] = 0;
-}
+    char * vram;
+    char * end = vram + 1023;
+    while (vram & (S-1)) *(vram++) = 0;
+    while (vram <= end-S) *(((long*)vram)++) = 0;
+    while (vram < end) *(vram++) = 0;
+} 
+
+
 
 #ifdef CALCULIB
 void ML_clear_screen()
