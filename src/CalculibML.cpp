@@ -31,14 +31,18 @@ char * ML_vram_adress()
 }
 #endif
 
-#define S (sizeof long)
+#define S (sizeof(long))
 
 void ML_clear_vram()
 {
     char * vram;
     char * end = vram + 1023;
-    while (vram & (S-1)) *(vram++) = 0;
-    while (vram <= end-S) *(((long*)vram)++) = 0;
+    while ( ((unsigned long)vram) & (S-1)) *(vram++) = 0;
+    while (vram <= end-S)
+    {
+        *((unsigned long*)vram) = 0;
+        vram += S;
+    }
     while (vram < end) *(vram++) = 0;
 } 
 
