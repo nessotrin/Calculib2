@@ -142,7 +142,7 @@ int Serial_WriteBytes(unsigned char *src, int size)
         Calculib3Pin::updateMutex.unlock();
         return 3;
     }
-    if(256-Calculib3Pin::receiveBuffer.size < size)
+    if(256-Calculib3Pin::sendBuffer.size < size)
     {
         Calculib3Pin::updateMutex.unlock();
         return 2;
