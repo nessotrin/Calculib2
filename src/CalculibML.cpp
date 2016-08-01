@@ -17,10 +17,6 @@ char * ML_vram_adress()
 {
     return (char *)CalculibGraphics::VRAM;
 }
-unsigned long ML_vram_adress_as_ulong()
-{
-    return (unsigned long) CalculibGraphics::VRAM;
-}
 #else
 typedef char*(*sc_cpv)(void);
 typedef unsigned long(*sc_cpv_ulong)(void);
@@ -35,7 +31,7 @@ char * ML_vram_adress()
 
 void ML_clear_vram()
 {
-    char * vram;
+    char * vram = ML_vram_adress();
     char * end = vram + 1023;
     while ( ((unsigned long)vram) & (S-1)) *(vram++) = 0;
     while (vram <= end-S)
