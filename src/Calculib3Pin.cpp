@@ -49,7 +49,9 @@ void Calculib3Pin::initCalculib3Pin()
 {
     receiveBuffer.buffer = (unsigned char *) malloc(1024); //Official specs
     sendBuffer.buffer = (unsigned char *) malloc(256); //Official specs
-        
+    receiveBuffer.size = 0;
+    sendBuffer.size = 0;
+    
     if(receiveBuffer.buffer == NULL || sendBuffer.buffer == NULL)
     {
         printf("Malloc error ! (3pin's buffer)\n");
@@ -136,7 +138,7 @@ int Serial_WriteByte(unsigned char byte)
 int Serial_WriteBytes(unsigned char *src, int size)
 {
     Calculib3Pin::updateMutex.lock();
-        
+  
     if(!Calculib3Pin::isProtocolConnected())
     {
         Calculib3Pin::updateMutex.unlock();

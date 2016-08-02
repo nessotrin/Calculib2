@@ -13,7 +13,7 @@ void CalculibProtocol::tick()
     }
     else
     {
-        if(connected)
+        if(connected) //socket lost connection
         {
             connected = false;
         }
@@ -30,7 +30,7 @@ void CalculibProtocol::removeFromSocket(int count)
 }
 
 bool CalculibProtocol::buildPacket(CalculibBuffer * packet, unsigned char type, CalculibBuffer * data)
-{
+{ 
     if(packet->size < 1+4+data->size+1) //too small
     {
         printf("Buffer is too small: Available %d, need %d\n",packet->size, 1+4+data->size+1);
@@ -56,7 +56,6 @@ CALCULIB_PACKET_READ_RESULT CalculibProtocol::readPacket(CalculibBuffer * packet
         return CALCULIB_PACKET_READ_NOT_COMPLETE;
     }
     
-         
     *type = packet->buffer[0];
     
     //checking data size
@@ -101,6 +100,7 @@ unsigned char CalculibProtocol::calculateChecksum(CalculibBuffer * packet)
 
 void CalculibProtocol::connect()
 {
+    //connected = true;
     if(!connected)
     {
         if(sendTypedData(0x2,NULL))
@@ -135,7 +135,7 @@ bool CalculibProtocol::sendTypedData(unsigned char type, CalculibBuffer * toSend
         toSend = &emptyBuffer;
     }
         
-    if(socket->getMaxSendBufferSize() - socket->getSendBuffer()->size < 1+4+toSend->size+1)
+    if(socket->getMaxSendBufferSize() - socket->getSendBuffer()->size < 1+4+toSend->size+1) // built packet size
     {
         return true; // out of space
     }
@@ -150,7 +150,7 @@ bool CalculibProtocol::sendTypedData(unsigned char type, CalculibBuffer * toSend
         return true;
     }
     
-    socket->getSendBuffer()->size += inSocketBuffer.size; // manually add to the size
+    socket->getSendBuffer()->size += inSocketBuffer.size; // manually add to the size (buildPacket wrote in the buffer)
     return false;
 }
 
@@ -183,8 +183,8 @@ void CalculibProtocol::readIncommingData(CalculibBuffer * toFill, int maxSize, b
     temp.buffer = tempData;
     temp.size = 1024;
     
-    CALCULIB_PACKET_READ_RESULT result = receiveIncommingData(&type,&temp);
-    while(result == 0)
+    CALCULIB_PACKET_READ_RESULT result = receiveIncommingData(&type,&temp) ;
+    while(result == CALCULIB_PACKET_READ_OK)
     {
         if(type == 0x1) //type 0x1 = raw data
         {
@@ -211,9 +211,7 @@ void CalculibProtocol::readIncommingData(CalculibBuffer * toFill, int maxSize, b
             
             removeFromSocket(1+4+temp.size+1); //remove the packet
         }
-        
-        //try next packet
-        result = receiveIncommingData(&type,&temp);
+        result = receiveIncommingData(&type,&temp) ;
     }
     
     if(result == CALCULIB_PACKET_READ_ERROR) //CORRUPTED

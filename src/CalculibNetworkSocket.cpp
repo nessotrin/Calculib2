@@ -4,22 +4,27 @@
 
 CalculibNetworkSocket::CalculibNetworkSocket()
 {
+    
+}
+CalculibNetworkSocket::~CalculibNetworkSocket()
+{
+    free(sendBuffer.buffer);
+    free(receiveBuffer.buffer);
+}
+
+void CalculibNetworkSocket::allocate()
+{
     sendBuffer.buffer = (unsigned char *) malloc(CALCULIB_NETWORKSOCKET_SEND_BUFFER_SIZE);
     receiveBuffer.buffer = (unsigned char *) malloc(CALCULIB_NETWORKSOCKET_RECEIVE_BUFFER_SIZE);
     if(sendBuffer.buffer == NULL || receiveBuffer.buffer == NULL)
     {
         printf("Socket memory alloc failed !\n");
+        exit(1);
     }
     sendBuffer.size = 0;
     receiveBuffer.size = 0;
-    printf("Alloc'ed\n");
 }
-CalculibNetworkSocket::~CalculibNetworkSocket()
-{
-    printf("Destroyed !\n");
-    free(sendBuffer.buffer);
-    free(receiveBuffer.buffer);
-}
+
 
 int CalculibNetworkSocket::getMaxSendBufferSize()
 {
@@ -27,7 +32,7 @@ int CalculibNetworkSocket::getMaxSendBufferSize()
 }
 
 void CalculibNetworkSocket::tick()
-{
+{  
     //receive
     std::size_t received;
     sf::Socket::Status resultReceive = SFMLSocket.receive(receiveBuffer.buffer+receiveBuffer.size,
@@ -134,8 +139,8 @@ CALCULIB_NETWORKSOCKET_TRYPROTOCOL_RESULT CalculibNetworkSocket::tryCalculib2Con
     sf::Socket::Status status = SFMLSocket.send("CALCULIB2_CONNECT",17,transfered);
     if(status == sf::Socket::Done)
     {
-        char data[25];
-        sf::Socket::Status receiveStatus = receiveWithTimeout(data, 25, &transfered,200); //fast answer expected
+        char data[21];
+        sf::Socket::Status receiveStatus = receiveWithTimeout(data, 21, &transfered,500); //fast answer expected
         if(receiveStatus == sf::Socket::Error || receiveStatus == sf::Socket::Disconnected)
         {
             printf("Connection is broken !\n");

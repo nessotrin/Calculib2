@@ -22,6 +22,7 @@ class CalculibNetworkSocket : public CalculibSocket
 public:
     CalculibNetworkSocket();
     ~CalculibNetworkSocket();
+    void allocate();
     int getMaxSendBufferSize();
     void tick();
     bool connect();
